@@ -13,20 +13,20 @@ En el presente laboratorio se pretende responder esta pregunta mediante el anál
 
 En primer lugar se crea la interfaz grafica con cada uno de los items a tener en cuenta, como el tomar la captura a tiempo real, guardar todos los datos tomados, plantear el analisis espectral y prueba de hipotesis.
 
-<img src="https://github.com/Mida2304/LABORATORIO4/blob/main/interfaz.png?raw=true" width="20%" />
+<img src="https://github.com/Mida2304/LABORATORIO5/blob/main/interfaz.png?raw=true" width="20%" />
 
 
-Posteriormente, gracias a la teoria se planteo en el laboratorio, se procede instalar el programa NI MAX el cual permitira identificar la conexion de DAQ National Instruments, para ser conectado al AD8232 que permitira adquirir la señal EMG.
+Posteriormente, gracias a la teoria se planteo en el laboratorio, se procede instalar el programa NI MAX el cual permitira identificar la conexion de DAQ National Instruments, para ser conectado al AD8232 que permitira adquirir la señal ECG.
 
-<img src="https://github.com/Mida2304/LABORATORIO4/blob/main/IMG-20250404-WA0036.jpg?raw=true" width="20%" />
+<img src="https://github.com/Mida2304/LABORATORIO5/blob/main/conexion.jpg?raw=true" width="20%" />
 
 A continuacion se muestra la conexion con el DAQ
 
-<img src="https://github.com/Mida2304/LABORATORIO4/blob/main/IMG-20250404-WA0042.jpg?raw=true" width="40%" />
+<img src="https://github.com/Mida2304/LABORATORIO5/blob/main/daq.jpg?raw=true" width="40%" />
 
 Posteriormente se realiza la prueba de aquisiscion de datos:
 
-<img src="https://github.com/Mida2304/LABORATORIO4/blob/main/IMG-20250404-WA0040.jpg?raw=true" width="40%" />
+<img src="https://github.com/Mida2304/LABORATORIO5/blob/main/adquisicion.jpg?raw=true" width="40%" />
 
 ### Conceptos para tener en cuenta:
 En este siguiente ítem se encuentran los conceptos que se deben tener en cuenta para poder entender de forma más adecuada el presente laboratorio.
@@ -57,28 +57,27 @@ Para el procedimiento anterior se tienen que tomar en cuenta las siguientes libr
 ##### - nidaqmx: libreria empleada para controlar dispositivos de adquisición de National Instruments NI DAQ, leyendo directamente la señal EMG de la targeta de adquisicion (en el caso del presente, se empleo un AD8232).
 ##### - AcquisitionType: Para especificar el tipo de adquisicion de datos (lectura continua o captura puntual).
 ##### - butter, filtfilt, iirnotch: Crea un filtro Butterworth sin cambiar la fase y un filtro rechaza banda para eliminar el ruido de 50 a 60 Hz, filtrando y suavizando la señal.
-##### - hamming, hann: La creacion de estas ventanas, atenuan los extremos de las señales para evitar errores por los bordes abruptos.
-##### - fft: Es para realizar los calculos de la transformada de Fourier para analizar el contenido en frecuencia de una señal.
-##### - ttest_rel: Esta libreria se utiliza para realizar la prueba de hipotesis de t muestras relacionadas.
 
-<img src="https://github.com/Mida2304/LABORATORIO4/blob/main/librerias.png?raw=true" width="20%" />
+<img src="https://github.com/Mida2304/LABORATORIO5/blob/main/librerias.png?raw=true" width="20%" />
 
-posteriormente, se crea la adquisicion de datos a tiempo real con DAQ y utilizando el boton iniciar captura se procede a visualizar los datos de la señal EMG a tiempo real.
+Posteriormente, se crea la adquisicion de datos a tiempo real con DAQ y utilizando el boton iniciar captura se procede a visualizar los datos de la señal ECG a tiempo real.
 
-<img src="https://github.com/Mida2304/LABORATORIO4/blob/main/grafica_emg.png?raw=true" width="20%" />
+<img src="https://github.com/Mida2304/LABORATORIO5/blob/main/iniciar.png?raw=true" width="20%" />
+En la anterior parte de codigo se puede visualizar su estructura tanto par iniciar como para detener dado que debemos tener un tiempo de toma de la muestra de 5 minutos o 300 s
 
-Despues se realiza el analisis espectral de la señal.
+Seguidamente, una vez obtenida la señal a tiempo real, se utiliza el boton "guardar cvs" ara que los datos obtenidos en tiempo real sean guardados en este tipo de archivo y el boton "cargar cvs" para cargar los datos en pantalla y hacer su respectivo analisis.
 
-<img src="https://github.com/Mida2304/LABORATORIO4/blob/main/ESPECTRO.png?raw=true" width="20%" />
+<img src="https://github.com/Mida2304/LABORATORIO5/blob/main/se%C3%B1al.png?raw=true" width="20%" />
 
-A continación se realizara una prueba de hipotesis de los datos calculados a partir de medianas calculadar al realizar cada contraccion y el resultado es el siguiente:
+Con esta parte obtenida se procede a implementar un sistema de filtrado, gracias a la literatura, se aplicara un filtro IIR y buterwort para que la señal de la frecuencia cardiaca salga con menos interferencia:
 
-<img src="https://github.com/Mida2304/LABORATORIO4/blob/main/t.png?raw=true" width="20%" />
+<img src="https://github.com/Mida2304/LABORATORIO5/blob/main/filtro%2B.png?raw=true" width="20%" />
 
-En esta ultima imagen, se observan los graficos de cada una de las partes, el primero de la señal EMG al final tomada de 5600671 quien tenia tendonitis, a este momento, se llego a la conclusion de que dado esto, la fatiga fue muy rapida, posteriormente se realizo un filtrado para realizar el analisis espectral de la señal emg y asi observar en el cuarto grafico el analisis de la fatiga de toda la señal:
+Posteriormente, se identifican los picos R de toda la señal...
 
-<img src="https://github.com/Mida2304/LABORATORIO4/blob/main/fatiga.png?raw=true" width="20%" />
+<img src="https://github.com/Mida2304/LABORATORIO5/blob/main/picos.png?raw=true" width="20%" />
 
+A continuación se calcula los intervalos R-R para la obtencion de una nueva señal
 
 # Requisitos
 - Contar con Python 3.9.0 instalado.

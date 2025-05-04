@@ -86,9 +86,12 @@ Con estos resoltados podemos obtener la frecuencia cardiaca promedio, del anteri
 Con el resultado de la media de intervalos podemos obtener la frecuencia cardiaca dividiendo 60 sobre el promedio y posteriormente tomar el tiempo total (en el presente 300 segundos) y dividirlo por el resultado anterior, con ello tenemos que nuestro sujeto tuvo una Frecuencia de 66
 
 Con estos resultados, vamos a estudiar dos tipos de transformada Wavelet en la parte continua y Discreta, en continua usaremos Morlet y discreta Daubechies:
+
 <img src="https://github.com/Mida2304/LABORATORIO5/blob/main/dabushe.png?raw=true" width="60%" />
+
 Esta transformada se utiliza para la compresión de señales, eliminación de ruido, extracción de características.
 <img src="https://github.com/Mida2304/LABORATORIO5/blob/main/morlet.png?raw=true" width="60%" />
+
 La transformada Wavelet Morlet detectar características transitorias, como los picos R, ondas P y T con buena precisión en ambas dimensiones.
 
 

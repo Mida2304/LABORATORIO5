@@ -71,13 +71,26 @@ Seguidamente, una vez obtenida la señal a tiempo real, se utiliza el boton "gua
 
 Con esta parte obtenida se procede a implementar un sistema de filtrado, gracias a la literatura, se aplicara un filtro IIR y buterwort para que la señal de la frecuencia cardiaca salga con menos interferencia:
 
-<img src="https://github.com/Mida2304/LABORATORIO5/blob/main/filtro%2B.png?raw=true" width="20%" />
+<img src="https://github.com/Mida2304/LABORATORIO5/blob/main/filtro%2B.png?raw=true" width="60%" />
 
-Posteriormente, se identifican los picos R de toda la señal...
+Posteriormente, se identifican los picos R de toda la señal cabe resaltar que se trata de 300 s
 
-<img src="https://github.com/Mida2304/LABORATORIO5/blob/main/picos.png?raw=true" width="20%" />
+<img src="https://github.com/Mida2304/LABORATORIO5/blob/main/picos.png?raw=true" width="60%" />
 
-A continuación se calcula los intervalos R-R para la obtencion de una nueva señal
+A continuación se calcula los intervalos R-R para la obtencion de una nueva señal.
+<img src="https://github.com/Mida2304/LABORATORIO5/blob/main/rr.png?raw=true" width="60%" />
+
+Con estos resoltados podemos obtener la frecuencia cardiaca promedio, del anterior grafico se obtienen los siguientes resultados:
+<img src="https://github.com/Mida2304/LABORATORIO5/blob/main/datosrr.png?raw=true" width="60%" />
+
+Con el resultado de la media de intervalos podemos obtener la frecuencia cardiaca dividiendo 60 sobre el promedio y posteriormente tomar el tiempo total (en el presente 300 segundos) y dividirlo por el resultado anterior, con ello tenemos que nuestro sujeto tuvo una Frecuencia de 66
+
+Con estos resultados, vamos a estudiar dos tipos de transformada Wavelet en la parte continua y Discreta, en continua usaremos Morlet y discreta Daubechies:
+<img src="https://github.com/Mida2304/LABORATORIO5/blob/main/dabushe.png?raw=true" width="60%" />
+Esta transformada se utiliza para la compresión de señales, eliminación de ruido, extracción de características.
+<img src="https://github.com/Mida2304/LABORATORIO5/blob/main/morlet.png?raw=true" width="60%" />
+La transformada Wavelet Morlet detectar características transitorias, como los picos R, ondas P y T con buena precisión en ambas dimensiones.
+
 
 # Requisitos
 - Contar con Python 3.9.0 instalado.

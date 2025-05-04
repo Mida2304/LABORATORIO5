@@ -1,181 +1,200 @@
 import sys
-import numpy as np
-import nidaqmx
-import csv
 import time
-from scipy.signal import butter, lfilter
-from nidaqmx.stream_readers import AnalogSingleChannelReader
-from PyQt6.QtWidgets import QMainWindow, QApplication, QPushButton, QVBoxLayout, QWidget
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6 import uic, QtCore
+from PyQt6.QtWidgets import QMainWindow, QApplication, QVBoxLayout, QInputDialog, QDialog, QLabel, QMessageBox
+from PyQt6.QtCore import pyqtSignal, QThread
+from PyQt6.QtGui import QPixmap
+import serial.tools.list_ports
+from PyQt6 import QtWidgets
+
+import serial
+import numpy as np
+import struct
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from datetime import datetime
+import os
+from PyQt6.QtWidgets import QComboBox
+from PyQt6.QtWidgets import QPushButton
+from PyQt6.QtWidgets import QWidget
 
-def diseno_filtro(fs):
-    lowcut = 0.5
-    highcut = 100
-    order = 4
-    nyquist = 0.5 * fs
-    low = lowcut / nyquist
-    high = highcut / nyquist
-    b, a = butter(order, [low, high], btype='band')
-    return b, a
 
-class Principal(QMainWindow):
+class BluetoothThread(QThread):
+    data_ready = pyqtSignal(list)
+
+    def __init__(self, port, baud_rate=115200):
+        super().__init__()
+        self.port = port
+        self.baud_rate = baud_rate
+
+    def run(self):
+        """Ejecución del hilo: lee datos del puerto serial."""
+        try:
+            self.ser = serial.Serial(self.port, self.baud_rate)
+            self.running = True
+            buffer = np.zeros(1000)
+            while self.running:
+                data = self.ser.read(50)
+                if len(data) == 50:
+                    try:
+                        data = struct.unpack('50B', data)
+                        for i in range(0, len(data), 2):
+                            if i + 1 < len(data):  # Validar índices
+                                value = data[i] * 100 + data[i + 1]
+                                buffer = np.roll(buffer, -1)
+                                buffer[-1] = value
+                        self.data_ready.emit(buffer)  # Emitir datos procesados
+                    except struct.error as e:
+                        print("Error al desempaquetar datos:", e)
+        except serial.SerialException as e:
+            print("Error en el puerto serial:", e)
+        finally:
+            if hasattr(self, 'ser') and self.ser and self.ser.is_open:
+                self.ser.close()
+
+    def stop(self):
+        """Detiene la lectura y cierra el puerto serial."""
+        self.running = False
+        self.wait()
+
+
+class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Adquisición de Señal ECG en Tiempo Real")
-        self.setGeometry(200, 200, 800, 600)
-
-        self.main_widget = QWidget()
-        self.setCentralWidget(self.main_widget)
-
+        self.setWindowTitle("Interfaz de Señal EMG")
+        self.setGeometry(100, 100, 800, 600)
         self.setStyleSheet("""
             QMainWindow { background-color: #eeaeff; }
-            QPushButton {
-                background-color: #A3B8E3;
-                color: black;
-                border-radius: 5px;
-                padding: 8px;
-                font-size: 14px;
-                font-weight: bold;
-            }
+            QPushButton { background-color: #A3B8E3; color: black; border-radius: 5px; padding: 8px; font-size: 14px; font-weight: bold; }
             QPushButton:hover { background-color: #A020F0; }
             QLabel { font-size: 16px; font-weight: bold; color: #4A6FA5; }
+            QComboBox { background-color: #A3B8E3; color: black; font-size: 14px; font-weight: bold; }
         """)
 
-        self.layout = QVBoxLayout(self.main_widget)
+        # Controles principales
+        self.combo_puertos = QComboBox()
+        self.connect_button = QPushButton("Conectar")
+        self.connect_button.clicked.connect(self.conectar_bluetooth)
 
-        self.button = QPushButton("Iniciar Grabación ECG")
-        self.button.clicked.connect(self.iniciar_grabacion)
-        self.layout.addWidget(self.button)
+        self.start_button = QPushButton("Iniciar Gráfica")
+        self.start_button.clicked.connect(self.iniciar_grafica)
+        self.start_button.setEnabled(False)
 
-        self.stop_button = QPushButton("Detener Grabación")
-        self.stop_button.clicked.connect(self.detener_grabacion)
-        self.stop_button.setEnabled(False)
-        self.layout.addWidget(self.stop_button)
+        self.save_button = QPushButton("Guardar CSV")
+        self.save_button.clicked.connect(self.guardar_csv)
+        self.save_button.setEnabled(False)
+
+        self.status_label = QLabel("Estado: No conectado")
+
+        # Layout de la interfaz
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(self.combo_puertos)
+        self.layout.addWidget(self.connect_button)
+        self.layout.addWidget(self.start_button)
+        self.layout.addWidget(self.save_button)
+        self.layout.addWidget(self.status_label)
 
         self.figure = Figure()
         self.canvas = FigureCanvas(self.figure)
-        self.layout.addWidget(self.canvas)
         self.ax = self.figure.add_subplot(111)
-        self.ax.set_title("Señal ECG en Tiempo Real")
+        self.layout.addWidget(self.canvas)
+
+        container = QWidget()
+        container.setLayout(self.layout)
+        self.setCentralWidget(container)
+
+        # Variables internas
+        self.hilo = None
+        self.connected = False
+        self.data = []
+        self.time_data = []
+        self.tiempo_inicial = 0
+
+        self.actualizar_puertos()
+
+    def actualizar_puertos(self):
+        """Actualiza la lista de puertos disponibles."""
+        self.combo_puertos.clear()
+        puertos = serial.tools.list_ports.comports()
+        for port in puertos:
+            self.combo_puertos.addItem(port.device)
+
+    def conectar_bluetooth(self):
+        """Conecta o desconecta el hilo Bluetooth."""
+        if not self.connected:
+            try:
+                self.port_selected = self.combo_puertos.currentText()
+                if not self.port_selected:
+                    raise ValueError("No se seleccionó un puerto.")
+                
+                # Crear el hilo de conexión Bluetooth
+                self.hilo = BluetoothThread(self.port_selected)
+                self.hilo.data_ready.connect(self.update_plot)
+                self.hilo.start()
+                
+                self.connected = True
+                self.connect_button.setText("Desconectar")
+                self.start_button.setEnabled(True)
+                self.status_label.setText(f"Estado: Conectado a {self.port_selected}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error de conexión", str(e))
+        else:
+            self.hilo.stop()
+            self.hilo = None
+            self.connected = False
+            self.connect_button.setText("Conectar")
+            self.start_button.setEnabled(False)
+            self.save_button.setEnabled(False)
+            self.status_label.setText("Estado: No conectado")
+
+    def iniciar_grafica(self):
+        """Inicializa los datos y la gráfica."""
+        if self.hilo and self.connected:
+            self.data.clear()
+            self.time_data.clear()
+            self.ax.clear()
+            self.ax.set_title("ECG en tiempo real")
+            self.ax.set_xlabel("Tiempo (s)")
+            self.ax.set_ylabel("Voltaje (V)")
+            self.canvas.draw()
+            self.tiempo_inicial = time.time()
+            self.save_button.setEnabled(True)
+
+    def update_plot(self, data):
+        """Actualiza la gráfica con nuevos datos."""
+        if not data:
+            return
+
+        tiempo_actual = time.time() - self.tiempo_inicial
+        self.time_data.append(tiempo_actual)
+        self.data.append(data[-1])
+
+        self.ax.clear()
+        self.ax.plot(self.time_data, self.data, color='purple')
+        self.ax.set_title("Datos en tiempo real")
         self.ax.set_xlabel("Tiempo (s)")
         self.ax.set_ylabel("Voltaje (V)")
-        self.line, = self.ax.plot([], [], 'b-')
-
-        self.data_buffer = []
-        self.time_buffer = []
-
-        self.sampling_rate = 1000  # Hz
-        self.total_time = 5 * 60   # 5 minutos
-        self.thread = None
-        self.guardado = False
-
-    def iniciar_grabacion(self):
-        self.data_buffer = []
-        self.time_buffer = []
-        self.ax.cla()
-        self.ax.set_title("Señal ECG en Tiempo Real")
-        self.ax.set_xlabel("Tiempo (s)")
-        self.ax.set_ylabel("Voltaje (V)")
-        self.line, = self.ax.plot([], [], 'b-')
-        self.guardado = False
-
-        self.thread = AdquisicionDAQ(self.sampling_rate, self.total_time)
-        self.thread.signal_data.connect(self.actualizar_grafica)
-        self.thread.finished.connect(self.finalizar_grabacion)
-        self.thread.start()
-
-        self.button.setEnabled(False)
-        self.stop_button.setEnabled(True)
-        self.button.setText("Grabando...")
-
-    def detener_grabacion(self):
-        if self.thread and self.thread.isRunning():
-            self.thread.stop()
-            self.thread.wait()
-
-    def actualizar_grafica(self, datos):
-        for valor in datos:
-            t = self.time_buffer[-1] + (1 / self.sampling_rate) if self.time_buffer else 0
-            self.data_buffer.append(valor)
-            self.time_buffer.append(t)
-
-        limite = self.sampling_rate * 5
-        self.line.set_data(self.time_buffer[-limite:], self.data_buffer[-limite:])
-        self.ax.relim()
-        self.ax.autoscale_view()
         self.canvas.draw()
 
-    def finalizar_grabacion(self):
-        if self.guardado:
+    def guardar_csv(self):
+        """Guarda los datos en un archivo CSV."""
+        if not self.data or not self.time_data:
+            QMessageBox.warning(self, "Sin datos", "No hay datos para guardar.")
             return
-        self.guardado = True
 
-        self.button.setEnabled(True)
-        self.stop_button.setEnabled(False)
-        self.button.setText("Iniciar Grabación ECG")
-        print("Grabación finalizada.")
-
+        nombre_archivo = f"datos_emg_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         try:
-            with open("datos_ecg.csv", mode='w', newline='') as file:
-                writer = csv.writer(file)
-                writer.writerow(["Tiempo (s)", "Voltaje (V)"])
-                for t, v in zip(self.time_buffer, self.data_buffer):
-                    writer.writerow([t, v])
-            print("Datos guardados en datos_ecg.csv")
-
-            with open("datos_ecg.txt", mode='w') as file:
-                file.write("Tiempo (s)\tVoltaje (V)\n")
-                for t, v in zip(self.time_buffer, self.data_buffer):
-                    file.write(f"{t:.4f}\t{v:.6f}\n")
-            print("Datos guardados en datos_ecg.txt")
-
-            self.figure.savefig("grafica_ecg.png")
-            print("Gráfica guardada como grafica_ecg.png")
+            with open(nombre_archivo, 'w') as f:
+                f.write("Tiempo (s),Amplitud\n")
+                for t, d in zip(self.time_data, self.data):
+                    f.write(f"{t:.2f},{d:.2f}\n")
+            QMessageBox.information(self, "Archivo guardado", f"Datos guardados en {nombre_archivo}")
         except Exception as e:
-            print(f"Error al guardar los datos: {e}")
+            QMessageBox.critical(self, "Error al guardar", str(e))
 
-class AdquisicionDAQ(QThread):
-    signal_data = pyqtSignal(list)
-
-    def __init__(self, fs, duracion):
-        super().__init__()
-        self.fs = fs
-        self.duracion = duracion
-        self.running = True
-        self.b, self.a = diseno_filtro(fs)  # Coeficientes del filtro
-        self.zi = np.zeros(max(len(self.a), len(self.b)) - 1)  # Condiciones iniciales en cero
-
-    def run(self):
-        try:
-            with nidaqmx.Task() as task:
-                task.ai_channels.add_ai_voltage_chan("Dev6/ai1")
-                task.timing.cfg_samp_clk_timing(rate=self.fs, sample_mode=nidaqmx.constants.AcquisitionType.CONTINUOUS)
-                reader = AnalogSingleChannelReader(task.in_stream)
-
-                buffer = np.zeros(100, dtype=np.float64)
-                start_time = time.time()
-
-                while self.running and (time.time() - start_time < self.duracion):
-                    reader.read_many_sample(buffer, number_of_samples_per_channel=len(buffer), timeout=1.0)
-
-                    # Filtrar datos
-                    datos_filtrados, self.zi = lfilter(self.b, self.a, buffer, zi=self.zi)
-
-                    self.signal_data.emit(datos_filtrados.tolist())
-
-        except Exception as e:
-            print(f"Error de adquisición: {e}")
-        finally:
-            self.running = False
-            self.finished.emit()
-
-    def stop(self):
-        self.running = False
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    ventana = Principal()
-    ventana.show()
+    mainWin = MainWindow()
+    mainWin.show()
     sys.exit(app.exec())

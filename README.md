@@ -94,6 +94,19 @@ Esta transformada se utiliza para la compresión de señales, eliminación de ru
 
 La transformada Wavelet Morlet detectar características transitorias, como los picos R, ondas P y T con buena precisión en ambas dimensiones.
 
+# Preguntas a resolver
+##### • ¿Qué diferencia se observan entre los análisis en el dominio del tiempo y el dominio tiempo-frecuencia?
+Las diferencias que se observan en el dominio del tiempo y el dominio tiempo frecuencia en este tipo de señales ECG, radica en que esta primera nos muestra las ondas típicas de la señal, como lo son las ondas P, el complejo QRS y la onda T, lo cual nos permite medir los distintos intervalos como el PR, el QT, y así mismo la frecunecia cardíaca a partir del intervalo R-R. Por otra parte, esta segunda nos permite divisar cómo cambia el contenido de las frecunecias cardíacas a lo largo del tiempo, esto nos ayuda a estudiar la variabilidad de la frecuencia cardíaca (HRV), actividad anormal, entre otros.
+
+Si divisamos las gráficas anteriores podemos divisar que la mitad de la señal posee unos picos menos elevados de lo que se observa en la otra mitad de la señal, esto se debe a que en el sujeto de prueba (lo que será en la vida real un paciente), en la primera mitad de tiempo estaba relajado, y posteriormente sufrio se sometió a estres produciendo picos más altos. Estos dos tipos de frecuencias nos permiten divisar si existen patologías en la variabilidad de estas.
+
+##### • ¿Qué efecto tiene el uso de diferentes funciones wavelet en los resultados del análisis?
+El efecto que tiene el uso de distintas funciones Wavelet en los resultados del análidis es la precisión en la detección de eventos, resolución de tiempo frecuencia, adaptabilidad a la forma de la señal, comprensión y eliminación del ruido, etc. 
+
+En nuestro caso, en este presente informe hicimos uso de las funciones Wavelet Daubechies y Morlet puesto que se asemejan mucho más a una señal biológica, que es lo que estamos tratando de divisar; en otras palabras, un filtro Daubechies tiene como característica una buena localización temporal parecida a la forma de un QRS, nos permite detectar de mejor forma los complejos QRS, por otra parte, el filtro Morlet parece a una sinusoide modulada, estos se asemejan más a una señal ECG. 
+
+##### • ¿Qué aplicaciones reales tiene esta práctica?
+Las aplicaciones reales que tiene esta práctica es que se puede usar como guía para el análisis de señales ECG junto con las características que este presenta. En otras palabras, al tener una señal ECG, y si esta se quiere análizar, podemos aplicar los conocimientos recopilados en esta práctica como los filtros Wavelet para saber si esta señal, junto con las frecuencias en el dominio del tiempo y dominio de frecuencia, posee picos extraños que nos permite saber si es anormal y de esta forma detectar si hay preexistencia de una patología.
 
 # Requisitos
 - Contar con Python 3.9.0 instalado.
